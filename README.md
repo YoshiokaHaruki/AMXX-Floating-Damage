@@ -8,6 +8,13 @@ The plugin uses only **1 model** to create 3D damage and also creates only **1 e
 About this system: [CSO Wikia](https://cso.fandom.com/wiki/Floating_Damage)
 
 ---
+### Special thanks
+- **Nexon Studio** - For this system in their game [(Game)](https://csonline.nexon.com/)
+- **Reega!** - For help in creating a model and animation for the model [(YouTube Channel)](https://www.youtube.com/channel/UCYC67b9yTn3X5bIlYTxrrLg) [(Him Server)](https://zm7up.ru/)
+- **Ruby** - For some help in implementing the plugin [(Dev-CS)](https://dev-cs.ru/members/6115/)
+- **shel** - For a special `stock` for the correct calculation of `body` [(Dev-CS)](https://dev-cs.ru/threads/222/page-7#post-77015)
+
+---
 ### Tests
 Plugin tested on:
 - **Windows**: ReHLDS 3.11.0.788-dev & ReGameDLL 5.21.0.556-dev & ReAPI 5.21.0.252 & Metamod-r v1.3.0.86 & AMX Mod X 1.9.0.5294
