@@ -1,0 +1,17 @@
+[en]
+ML_Damager_Menu_Title = \y3D Damager Settings
+ML_Damager_Menu_Status = Damager status
+ML_Damager_Menu_Skin = Damager skin
+ML_Damager_Menu_Show = Show skin
+ML_Damager_Menu_Exit = Exit
+ML_Damager_Status_On = \yEnabled
+ML_Damager_Status_Off = \rDisabled
+
+[ru]
+ML_Damager_Menu_Title = \yНастройки 3D дамагера
+ML_Damager_Menu_Status = Статус дамагера
+ML_Damager_Menu_Skin = Номер скина дамагера
+ML_Damager_Menu_Show = Показать скин
+ML_Damager_Menu_Exit = Выход
+ML_Damager_Status_On = \yВключен
+ML_Damager_Status_Off = \rВыключен
