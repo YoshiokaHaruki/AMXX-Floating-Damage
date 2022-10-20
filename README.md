@@ -1,4 +1,4 @@
-# AMXX-Floating-Damage
+# AMXX Floating Damage
 A simple plugin for a 3D-Damager (Based on AMX Mod X)
 
 This plugin adds a 3D-Damager to your server, which is similar to the one in the game **Counter-Strike Online / Counter-Strike Nexon: Studio**
