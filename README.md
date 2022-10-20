@@ -15,6 +15,10 @@ About this system: [CSO Wikia](https://cso.fandom.com/wiki/Floating_Damage)
 - **shel** - For a special `stock` for the correct calculation of `body` [(Dev-CS)](https://dev-cs.ru/threads/222/page-7#post-77015)
 
 ---
+### Demo video:
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/kOgsxeqqD4Q/0.jpg)](https://youtu.be/kOgsxeqqD4Q)
+
+---
 ### Tests
 Plugin tested on:
 - **Windows**: ReHLDS 3.11.0.788-dev & ReGameDLL 5.21.0.556-dev & ReAPI 5.21.0.252 & Metamod-r v1.3.0.86 & AMX Mod X 1.9.0.5294
