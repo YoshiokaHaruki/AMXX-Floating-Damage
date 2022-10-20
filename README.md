@@ -10,7 +10,7 @@ About this system: [CSO Wikia](https://cso.fandom.com/wiki/Floating_Damage)
 ---
 ### Special thanks
 - **Nexon Studio** - For this system in their game [(Game)](https://csonline.nexon.com/)
-- **Reega!** - For help in creating a model and animation for the model [(YouTube Channel)](https://www.youtube.com/channel/UCYC67b9yTn3X5bIlYTxrrLg) [(Him Server)](https://zm7up.ru/)
+- **Reega!** - For help in creating a model and animation for the model [(YouTube Channel)](https://www.youtube.com/channel/UCYC67b9yTn3X5bIlYTxrrLg) [(His Server)](https://zm7up.ru/)
 - **Ruby** - For some help in implementing the plugin [(Dev-CS)](https://dev-cs.ru/members/6115/)
 - **shel** - For a special `stock` for the correct calculation of `body` [(Dev-CS)](https://dev-cs.ru/threads/222/page-7#post-77015)
 
