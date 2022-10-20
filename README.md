@@ -19,7 +19,6 @@ Plugin tested on:
   - In order for everything to work correctly, you need to change the `delta.lst` file, I attached this file too, but if you have already changed it in some other way, it is enough to find all the values of `body` in this file and if it has a value of `8`, it is worth changing this value to `16` or more
 - The 'source' folder contains the plugin and include for compiling the plugin (If your server does not support Re modules)
   - **NB!** If your server does not support Re modules, find the line `#include <reapi>` and you should delete it or turn it off (using //)
-  **Example:**
   ```Pawn
   // #include <reapi>
   ```
