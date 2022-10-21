@@ -1,4 +1,4 @@
-# AMXX-Floating-Damage
+# AMXX Floating Damage
 A simple plugin for a 3D-Damager (Based on AMX Mod X)
 
 This plugin adds a 3D-Damager to your server, which is similar to the one in the game **Counter-Strike Online / Counter-Strike Nexon: Studio**
@@ -10,9 +10,13 @@ About this system: [CSO Wikia](https://cso.fandom.com/wiki/Floating_Damage)
 ---
 ### Special thanks
 - **Nexon Studio** - For this system in their game [(Game)](https://csonline.nexon.com/)
-- **Reega!** - For help in creating a model and animation for the model [(YouTube Channel)](https://www.youtube.com/channel/UCYC67b9yTn3X5bIlYTxrrLg) [(Him Server)](https://zm7up.ru/)
+- **Reega!** - For help in creating a model and animation for the model [(YouTube Channel)](https://www.youtube.com/channel/UCYC67b9yTn3X5bIlYTxrrLg) [(His Server)](https://zm7up.ru/)
 - **Ruby** - For some help in implementing the plugin [(Dev-CS)](https://dev-cs.ru/members/6115/)
 - **shel** - For a special `stock` for the correct calculation of `body` [(Dev-CS)](https://dev-cs.ru/threads/222/page-7#post-77015)
+
+---
+### Demo video:
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/kOgsxeqqD4Q/0.jpg)](https://youtu.be/kOgsxeqqD4Q)
 
 ---
 ### Tests
