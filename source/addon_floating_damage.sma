@@ -1,5 +1,5 @@
 new const PluginName[ ] =					"[AMXX] Addon: Floating Damage";
-new const PluginVersion[ ] =				"1.0";
+new const PluginVersion[ ] =				"1.0v3";
 new const PluginAuthor[ ] =					"Yoshioka Haruki";
 new const PluginPrefix[ ] =					"Floating Damager";
 
@@ -169,6 +169,9 @@ public ClientCommand__DamagerMenu( const pPlayer )
 public CBasePlayer__TakeDamage_Post( const pVictim, const pInflictor, const pAttacker, const Float: flDamage )
 {
 	if ( !is_user_alive( pAttacker ) || !UserDamagerEnabled( pAttacker ) )
+		return;
+
+	if ( pVictim == pAttacker )
 		return;
 
 	new Vector3( vecOrigin ); get_entvar( pVictim, var_origin, vecOrigin );
