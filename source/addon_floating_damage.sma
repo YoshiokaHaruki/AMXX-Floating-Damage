@@ -71,12 +71,13 @@ new gl_iUserDamagerSkin[ MAX_PLAYERS + 1 ];
 	#define MAX_MENU_LENGTH					512
 #endif
 
+#define BIT_PLAYER(%0)						( BIT( %0 - 1 ) )
 #define BIT_ADD(%0,%1)						( %0 |= %1 )
 #define BIT_SUB(%0,%1)						( %0 &= ~%1 )
 #define BIT_VALID(%0,%1)					( %0 & %1 )
 #define BIT_INVERT(%0,%1)					( %0 ^= %1 )
 
-#define UserDamagerEnabled(%0)				( BIT_VALID( gl_bitsUserDamagerEnabled, BIT( %0 ) ) ? true : false )
+#define UserDamagerEnabled(%0)				( BIT_VALID( gl_bitsUserDamagerEnabled, BIT_PLAYER( %0 ) ) ? true : false )
 #define SetFormatex(%0,%1,%2)				( %1 = formatex( %0, charsmax( %0 ), %2 ) )
 #define AddFormatex(%0,%1,%2)				( %1 += formatex( %0[ %1 ], charsmax( %0 ) - %1, %2 ) )
 
@@ -144,7 +145,7 @@ public plugin_cfg( )
 public client_putinserver( pPlayer )
 {
 #if defined EnableDamagerForNewPlayers
-	BIT_ADD( gl_bitsUserDamagerEnabled, BIT( pPlayer ) );
+	BIT_ADD( gl_bitsUserDamagerEnabled, BIT_PLAYER( pPlayer ) );
 #endif
 
 #if !defined _reapi_included
@@ -157,7 +158,7 @@ public client_putinserver( pPlayer )
 #else
 	public client_disconnected( pPlayer )
 #endif
-		BIT_SUB( gl_bitsUserDamagerEnabled, BIT( pPlayer ) );
+		BIT_SUB( gl_bitsUserDamagerEnabled, BIT_PLAYER( pPlayer ) );
 
 public ClientCommand__DamagerMenu( const pPlayer )
 {
@@ -227,7 +228,7 @@ public MenuDamager_Handler( const pPlayer, const iMenuKey )
 	switch ( iMenuKey )
 	{
 		case 0: {
-			BIT_INVERT( gl_bitsUserDamagerEnabled, BIT( pPlayer ) );
+			BIT_INVERT( gl_bitsUserDamagerEnabled, BIT_PLAYER( pPlayer ) );
 		}
 		case 1: {
 			if ( ++gl_iUserDamagerSkin[ pPlayer ] && gl_iUserDamagerSkin[ pPlayer ] >= EntityDamagerSkinsCount )
@@ -363,7 +364,7 @@ public bool: native_set_user_damager_status( const iPlugin, const iParams )
 	}
 
 	new bool: bValue = bool: get_param( arg_value );
-	bValue ? BIT_ADD( gl_bitsUserDamagerEnabled, BIT( pPlayer ) ) : BIT_SUB( gl_bitsUserDamagerEnabled, BIT( pPlayer ) );
+	bValue ? BIT_ADD( gl_bitsUserDamagerEnabled, BIT_PLAYER( pPlayer ) ) : BIT_SUB( gl_bitsUserDamagerEnabled, BIT_PLAYER( pPlayer ) );
 
 	return true;
 }
