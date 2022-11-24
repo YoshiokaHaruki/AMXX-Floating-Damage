@@ -1,5 +1,5 @@
 new const PluginName[ ] =					"[AMXX] Addon: Floating Damage";
-new const PluginVersion[ ] =				"1.0v3";
+new const PluginVersion[ ] =				"1.0v4";
 new const PluginAuthor[ ] =					"Yoshioka Haruki";
 new const PluginPrefix[ ] =					"Floating Damager";
 
@@ -172,7 +172,7 @@ public CBasePlayer__TakeDamage_Post( const pVictim, const pInflictor, const pAtt
 	if ( !is_user_alive( pAttacker ) || !UserDamagerEnabled( pAttacker ) )
 		return;
 
-	if ( pVictim == pAttacker )
+	if ( pVictim == pAttacker || get_member( pVictim, m_iTeam ) == get_member( pAttacker, m_iTeam ) )
 		return;
 
 	new Vector3( vecOrigin ); get_entvar( pVictim, var_origin, vecOrigin );
