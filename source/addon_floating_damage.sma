@@ -1,11 +1,11 @@
 new const PluginName[ ] =					"[AMXX] Addon: Floating Damage";
-new const PluginVersion[ ] =				"1.0v4";
+new const PluginVersion[ ] =				"1.0.5";
 new const PluginAuthor[ ] =					"Yoshioka Haruki";
 new const PluginPrefix[ ] =					"Floating Damager";
 
 /* ~ [ Includes ] ~ */
 #include <amxmodx>
-#include <fakemeta>
+#include <fakemeta_util>
 #include <xs>
 
 /**
@@ -56,11 +56,17 @@ const Float: EntityDamagerAnimFrameRate =	0.33;
 const EntityDamagerSkinsCount =				10;
 
 /* ~ [ Params ] ~ */
+#if AMXX_VERSION_NUM <= 182
+	new MaxClients;
+#endif
+
 #if !defined _reapi_included
 	new gl_iszAllocString_Damager;
 #endif
+
 new gl_bitsUserDamagerEnabled;
 new gl_iUserDamagerSkin[ MAX_PLAYERS + 1 ];
+new Float: gl_flUserTotalDamage[ MAX_PLAYERS + 1 ][ MAX_PLAYERS + 1 ];
 
 /* ~ [ Macroses ] ~ */
 #if !defined Vector3
@@ -77,12 +83,16 @@ new gl_iUserDamagerSkin[ MAX_PLAYERS + 1 ];
 #define BIT_VALID(%0,%1)					( %0 & %1 )
 #define BIT_INVERT(%0,%1)					( %0 ^= %1 )
 
+#define IsUserValid(%0)						bool: ( 0 < %0 <= MaxClients )
 #define UserDamagerEnabled(%0)				( BIT_VALID( gl_bitsUserDamagerEnabled, BIT_PLAYER( %0 ) ) ? true : false )
 #define SetFormatex(%0,%1,%2)				( %1 = formatex( %0, charsmax( %0 ), %2 ) )
 #define AddFormatex(%0,%1,%2)				( %1 += formatex( %0[ %1 ], charsmax( %0 ) - %1, %2 ) )
 
 // https://dev-cs.ru/threads/222/post-76443
 #define register_cmd_list(%0,%1,%2)			for ( new i; i < sizeof %1; i++ ) register_%0( %1[ i ], %2 )
+
+#define var_start_origin					var_vuser1
+#define var_start_velocity					var_vuser2
 
 /* ~ [ AMX Mod X ] ~ */
 public plugin_natives( )
@@ -131,6 +141,15 @@ public plugin_init( )
 
 	/* -> Register Menus <- */
 	register_menucmd( register_menuid( "MenuDamager_Show" ), ( MENU_KEY_0|MENU_KEY_1|MENU_KEY_2|MENU_KEY_3 ), "MenuDamager_Handler" );
+
+	/* -> Other <- */
+#if AMXX_VERSION_NUM <= 182
+	#if defined _reapi_included
+		MaxClients = get_member_game( m_nMaxPlayers );
+	#else
+		MaxClients = get_maxplayers( );
+	#endif
+#endif
 }
 
 public plugin_cfg( )
@@ -169,14 +188,16 @@ public ClientCommand__DamagerMenu( const pPlayer )
 /* ~ [ ReGameDLL ] ~ */
 public CBasePlayer__TakeDamage_Post( const pVictim, const pInflictor, const pAttacker, const Float: flDamage )
 {
-	if ( !is_user_alive( pAttacker ) || !UserDamagerEnabled( pAttacker ) )
+	if ( !is_user_alive( pAttacker ) || pVictim == pAttacker || !UserDamagerEnabled( pAttacker ) )
 		return;
 
-	if ( pVictim == pAttacker || get_member( pVictim, m_iTeam ) == get_member( pAttacker, m_iTeam ) )
+	if ( get_member( pVictim, m_iTeam ) == get_member( pAttacker, m_iTeam ) )
 		return;
 
 	new Vector3( vecOrigin ); get_entvar( pVictim, var_origin, vecOrigin );
-	CDamager__SpawnEntity( pAttacker, vecOrigin, flDamage, bool: ( get_member( pVictim, m_LastHitGroup ) == HIT_HEAD ) );
+	gl_flUserTotalDamage[ pAttacker ][ pVictim ] += flDamage;
+
+	CDamager__SpawnEntity( pAttacker, pVictim, vecOrigin, gl_flUserTotalDamage[ pAttacker ][ pVictim ], bool: ( get_member( pVictim, m_LastHitGroup ) == HIT_HEAD ) );
 }
 
 #if !defined _reapi_included
@@ -244,7 +265,7 @@ public MenuDamager_Handler( const pPlayer, const iMenuKey )
 			get_tr2( 0, TR_vecEndPos, vecEndPos );
 
 			for ( new i = 0; i < 2; i++ )
-				CDamager__SpawnEntity( pPlayer, vecEndPos, DamagerTestDamages[ i ], bool: i );
+				CDamager__SpawnEntity( pPlayer, NULLENT, vecEndPos, DamagerTestDamages[ i ], bool: i );
 		}
 	}
 
@@ -252,22 +273,33 @@ public MenuDamager_Handler( const pPlayer, const iMenuKey )
 }
 
 /* ~ [ Other ] ~ */
-public CDamager__SpawnEntity( const pPlayer, Vector3( vecOrigin ), Float: flDamage, const bool: bHeadShot )
+public CDamager__SpawnEntity( const pPlayer, const pVictim, Vector3( vecOrigin ), const Float: flDamage, const bool: bHeadShot )
 {
-	new pEntity = rg_create_entity( EntityDamagerReference );
-	if ( is_nullent( pEntity ) )
-		return NULLENT;
-
-	flDamage = floatmin( flDamage, 9999.0 );
-
 	new iDamagerSkin = gl_iUserDamagerSkin[ pPlayer ];
 	if ( iDamagerSkin != 0 ) iDamagerSkin *= 2;
 	if ( bHeadShot ) iDamagerSkin += 1;
 
-	// Prepare body
-	new szDamage[ MAX_BODY_PARTS + 1 ], aParts[ MAX_BODY_PARTS ]
-	for ( new i, j = num_to_str( floatround( flDamage ), szDamage, charsmax( szDamage ) ); i < j; i++ )
-		aParts[ i ] = ++szDamage[ i ] - ASCII_ZERO;
+	new pEntity = CDamager__FindActiveEntity( pPlayer, pVictim );
+	if ( pEntity != NULLENT )
+	{
+		get_entvar( pEntity, var_start_origin, vecOrigin );
+		engfunc( EngFunc_SetOrigin, pEntity, vecOrigin );
+
+		get_entvar( pEntity, var_start_velocity, vecOrigin );
+		set_entvar( pEntity, var_velocity, vecOrigin );
+
+		set_entvar( pEntity, var_sequence, 0 );
+		set_entvar( pEntity, var_renderamt, 255.0 );
+		set_entvar( pEntity, var_nextthink, get_gametime( ) + 0.3 );
+		set_entvar( pEntity, var_skin, iDamagerSkin );
+		set_entvar( pEntity, var_body, CDamager__PrepareBody( flDamage ) );
+
+		return pEntity;
+	}
+
+	pEntity = rg_create_entity( EntityDamagerReference );
+	if ( is_nullent( pEntity ) )
+		return NULLENT;
 
 	vecOrigin[ 0 ] += random_float( -32.0, 32.0 );
 	vecOrigin[ 1 ] += random_float( -32.0, 32.0 );
@@ -289,8 +321,13 @@ public CDamager__SpawnEntity( const pPlayer, Vector3( vecOrigin ), Float: flDama
 	set_entvar( pEntity, var_solid, SOLID_NOT );
 	set_entvar( pEntity, var_movetype, MOVETYPE_NOCLIP );
 	set_entvar( pEntity, var_owner, pPlayer );
+	set_entvar( pEntity, var_playerclass, pVictim );
 	set_entvar( pEntity, var_skin, iDamagerSkin );
-	set_entvar( pEntity, var_body, CalculateModelBodyArr( aParts, MAX_BODY_SUBMODELS, MAX_BODY_PARTS ) );
+	set_entvar( pEntity, var_body, CDamager__PrepareBody( flDamage ) );
+
+	// Cache vars
+	set_entvar( pEntity, var_start_origin, vecOrigin );
+	set_entvar( pEntity, var_start_velocity, vecVelocity );
 
 #if defined _reapi_included
 	set_entvar( pEntity, var_effects, get_entvar( pEntity, var_effects ) | EF_OWNER_VISIBILITY );
@@ -314,10 +351,35 @@ public CDamager__SpawnEntity( const pPlayer, Vector3( vecOrigin ), Float: flDama
 	return pEntity;
 }
 
+public CDamager__FindActiveEntity( const pPlayer, const pVictim )
+{
+	if ( !IsUserValid( pVictim ) )
+		return NULLENT;
+
+	if ( gl_flUserTotalDamage[ pPlayer ][ pVictim ] <= 0.0 )
+		return NULLENT;
+
+	new pEntity = MaxClients;
+	while ( ( pEntity = fm_find_ent_by_class( pEntity, EntityDamagerClassName ) ) > 0 )
+	{
+		if ( get_entvar( pEntity, var_owner ) != pPlayer )
+			continue;
+
+		if ( get_entvar( pEntity, var_playerclass ) != pVictim )
+			continue;
+
+		return pEntity;
+	}
+
+	return NULLENT;
+}
+
 public CDamager__Think( const pEntity )
 {
+	static pOwner; pOwner = get_entvar( pEntity, var_owner );
+
 #if defined EnableDamagerRotation
-	static Vector3( vecAngles ); get_entvar( get_entvar( pEntity, var_owner ), var_v_angle, vecAngles );
+	static Vector3( vecAngles ); get_entvar( pOwner, var_v_angle, vecAngles );
 
 	vecAngles[ 1 ] -= 180.0;
 	set_entvar( pEntity, var_angles, vecAngles );
@@ -329,12 +391,28 @@ public CDamager__Think( const pEntity )
 	static Float: flRenderAmt; get_entvar( pEntity, var_renderamt, flRenderAmt );
 	if ( ( flRenderAmt -= 15.0 ) && flRenderAmt <= 15.0 )
 	{
+		static pVictim; pVictim = get_entvar( pEntity, var_playerclass );
+
+		if ( IsUserValid( pVictim ) )
+			gl_flUserTotalDamage[ pOwner ][ pVictim ] = 0.0;
+
 		UTIL_KillEntity( pEntity );
 		return;
 	}
 
 	set_entvar( pEntity, var_renderamt, flRenderAmt );
 	set_entvar( pEntity, var_nextthink, get_gametime( ) + Float: EntityDamagerNextThink );
+}
+
+public CDamager__PrepareBody( Float: flDamage )
+{
+	flDamage = floatmin( flDamage, 9999.0 );
+
+	new szDamage[ MAX_BODY_PARTS + 1 ], aParts[ MAX_BODY_PARTS ]
+	for ( new i, j = num_to_str( floatround( flDamage ), szDamage, charsmax( szDamage ) ); i < j; i++ )
+		aParts[ i ] = ++szDamage[ i ] - ASCII_ZERO;
+
+	return CalculateModelBodyArr( aParts, MAX_BODY_SUBMODELS, MAX_BODY_PARTS );
 }
 
 /* ~ [ Natives ] ~ */
