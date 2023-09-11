@@ -1,5 +1,5 @@
 new const PluginName[ ] =					"[AMXX] Addon: Floating Damage";
-new const PluginVersion[ ] =				"1.0.5";
+new const PluginVersion[ ] =				"1.0.6";
 new const PluginAuthor[ ] =					"Yoshioka Haruki";
 new const PluginPrefix[ ] =					"Floating Damager";
 
@@ -66,7 +66,6 @@ const EntityDamagerSkinsCount =				10;
 
 new gl_bitsUserDamagerEnabled;
 new gl_iUserDamagerSkin[ MAX_PLAYERS + 1 ];
-new Float: gl_flUserTotalDamage[ MAX_PLAYERS + 1 ][ MAX_PLAYERS + 1 ];
 
 /* ~ [ Macroses ] ~ */
 #if !defined Vector3
@@ -91,8 +90,7 @@ new Float: gl_flUserTotalDamage[ MAX_PLAYERS + 1 ][ MAX_PLAYERS + 1 ];
 // https://dev-cs.ru/threads/222/post-76443
 #define register_cmd_list(%0,%1,%2)			for ( new i; i < sizeof %1; i++ ) register_%0( %1[ i ], %2 )
 
-#define var_start_origin					var_vuser1
-#define var_start_velocity					var_vuser2
+#define var_start_velocity					var_vuser1
 
 /* ~ [ AMX Mod X ] ~ */
 public plugin_natives( )
@@ -195,9 +193,7 @@ public CBasePlayer__TakeDamage_Post( const pVictim, const pInflictor, const pAtt
 		return;
 
 	new Vector3( vecOrigin ); get_entvar( pVictim, var_origin, vecOrigin );
-	gl_flUserTotalDamage[ pAttacker ][ pVictim ] += flDamage;
-
-	CDamager__SpawnEntity( pAttacker, pVictim, vecOrigin, gl_flUserTotalDamage[ pAttacker ][ pVictim ], bool: ( get_member( pVictim, m_LastHitGroup ) == HIT_HEAD ) );
+	CDamager__SpawnEntity( pAttacker, pVictim, vecOrigin, flDamage, bool: ( get_member( pVictim, m_LastHitGroup ) == HIT_HEAD ) );
 }
 
 #if !defined _reapi_included
@@ -273,7 +269,7 @@ public MenuDamager_Handler( const pPlayer, const iMenuKey )
 }
 
 /* ~ [ Other ] ~ */
-public CDamager__SpawnEntity( const pPlayer, const pVictim, Vector3( vecOrigin ), const Float: flDamage, const bool: bHeadShot )
+public CDamager__SpawnEntity( const pPlayer, const pVictim, Vector3( vecOrigin ), Float: flDamage, const bool: bHeadShot )
 {
 	new iDamagerSkin = gl_iUserDamagerSkin[ pPlayer ];
 	if ( iDamagerSkin != 0 ) iDamagerSkin *= 2;
@@ -282,11 +278,29 @@ public CDamager__SpawnEntity( const pPlayer, const pVictim, Vector3( vecOrigin )
 	new pEntity = CDamager__FindActiveEntity( pPlayer, pVictim );
 	if ( pEntity != NULLENT )
 	{
-		get_entvar( pEntity, var_start_origin, vecOrigin );
+		// Update origin
+		if ( pVictim != NULLENT )
+			CDamager__GetPosition( pPlayer, pVictim, vecOrigin, vecOrigin );
+
 		engfunc( EngFunc_SetOrigin, pEntity, vecOrigin );
 
+		// Update velocity
 		get_entvar( pEntity, var_start_velocity, vecOrigin );
 		set_entvar( pEntity, var_velocity, vecOrigin );
+
+		// Update angles
+		get_entvar( pPlayer, var_v_angle, vecOrigin );
+		vecOrigin[ 1 ] -= 180.0;
+		set_entvar( pEntity, var_angles, vecOrigin );
+
+		// Update total damage
+	#if !defined _reapi_included
+		new Float: flDamageSave; get_entvar( pEntity, var_dmg_save, flDamageSave );
+		flDamage += flDamageSave;
+	#else
+		flDamage += Float: get_entvar( pEntity, var_dmg_save );
+	#endif
+		set_entvar( pEntity, var_dmg_save, flDamage );
 
 		set_entvar( pEntity, var_sequence, 0 );
 		set_entvar( pEntity, var_renderamt, 255.0 );
@@ -301,9 +315,15 @@ public CDamager__SpawnEntity( const pPlayer, const pVictim, Vector3( vecOrigin )
 	if ( is_nullent( pEntity ) )
 		return NULLENT;
 
-	vecOrigin[ 0 ] += random_float( -32.0, 32.0 );
-	vecOrigin[ 1 ] += random_float( -32.0, 32.0 );
-	vecOrigin[ 2 ] += 16.0;
+	if ( pVictim != NULLENT )
+		CDamager__GetPosition( pPlayer, pVictim, vecOrigin, vecOrigin );
+	else
+	{
+		vecOrigin[ 0 ] += random_float( -32.0, 32.0 );
+		vecOrigin[ 1 ] += random_float( -32.0, 32.0 );
+		vecOrigin[ 2 ] += 16.0;
+	}
+
 	new Vector3( vecTemp ); xs_vec_copy( vecOrigin, vecTemp );
 
 	new Vector3( vecVelocity ); vecTemp[ 2 ] += 64.0;
@@ -326,8 +346,8 @@ public CDamager__SpawnEntity( const pPlayer, const pVictim, Vector3( vecOrigin )
 	set_entvar( pEntity, var_body, CDamager__PrepareBody( flDamage ) );
 
 	// Cache vars
-	set_entvar( pEntity, var_start_origin, vecOrigin );
 	set_entvar( pEntity, var_start_velocity, vecVelocity );
+	set_entvar( pEntity, var_dmg_save, flDamage );
 
 #if defined _reapi_included
 	set_entvar( pEntity, var_effects, get_entvar( pEntity, var_effects ) | EF_OWNER_VISIBILITY );
@@ -336,7 +356,6 @@ public CDamager__SpawnEntity( const pPlayer, const pVictim, Vector3( vecOrigin )
 #endif
 
 	get_entvar( pPlayer, var_v_angle, vecTemp );
-
 	vecTemp[ 1 ] -= 180.0;
 	set_entvar( pEntity, var_angles, vecTemp );
 
@@ -349,29 +368,6 @@ public CDamager__SpawnEntity( const pPlayer, const pVictim, Vector3( vecOrigin )
 	UTIL_SetEntityRendering( pEntity, _, _, kRenderTransAdd, 255.0 );
 
 	return pEntity;
-}
-
-public CDamager__FindActiveEntity( const pPlayer, const pVictim )
-{
-	if ( !IsUserValid( pVictim ) )
-		return NULLENT;
-
-	if ( gl_flUserTotalDamage[ pPlayer ][ pVictim ] <= 0.0 )
-		return NULLENT;
-
-	new pEntity = MaxClients;
-	while ( ( pEntity = fm_find_ent_by_class( pEntity, EntityDamagerClassName ) ) > 0 )
-	{
-		if ( get_entvar( pEntity, var_owner ) != pPlayer )
-			continue;
-
-		if ( get_entvar( pEntity, var_playerclass ) != pVictim )
-			continue;
-
-		return pEntity;
-	}
-
-	return NULLENT;
 }
 
 public CDamager__Think( const pEntity )
@@ -391,17 +387,50 @@ public CDamager__Think( const pEntity )
 	static Float: flRenderAmt; get_entvar( pEntity, var_renderamt, flRenderAmt );
 	if ( ( flRenderAmt -= 15.0 ) && flRenderAmt <= 15.0 )
 	{
-		static pVictim; pVictim = get_entvar( pEntity, var_playerclass );
-
-		if ( IsUserValid( pVictim ) )
-			gl_flUserTotalDamage[ pOwner ][ pVictim ] = 0.0;
-
 		UTIL_KillEntity( pEntity );
 		return;
 	}
 
 	set_entvar( pEntity, var_renderamt, flRenderAmt );
 	set_entvar( pEntity, var_nextthink, get_gametime( ) + Float: EntityDamagerNextThink );
+}
+
+public CDamager__FindActiveEntity( const pPlayer, const pVictim )
+{
+	if ( !IsUserValid( pVictim ) )
+		return NULLENT;
+
+	new pEntity = MaxClients;
+	while ( ( pEntity = fm_find_ent_by_class( pEntity, EntityDamagerClassName ) ) > 0 )
+	{
+		if ( get_entvar( pEntity, var_owner ) != pPlayer )
+			continue;
+
+		if ( get_entvar( pEntity, var_playerclass ) != pVictim )
+			continue;
+
+		return pEntity;
+	}
+
+	return NULLENT;
+}
+
+public CDamager__GetPosition( const pPlayer, const pVictim, Vector3( vecVictimOrigin ), Vector3( vecOut ) )
+{
+	// by Docaner
+	new Vector3( vecAttackerOrigin );
+	get_entvar( pPlayer, var_origin, vecAttackerOrigin );
+
+	new Vector3( vecDirection );
+	xs_vec_sub( vecAttackerOrigin, vecVictimOrigin, vecDirection );
+	xs_vec_normalize( vecDirection, vecDirection );
+
+	new Vector3( vecViewOfs );
+	get_entvar( pVictim, var_view_ofs, vecViewOfs );
+	vecViewOfs[ 2 ] += 30.0;
+
+	xs_vec_add( vecVictimOrigin, vecViewOfs, vecOut );
+	xs_vec_add_scaled( vecOut, vecDirection, 20.0, vecOut );
 }
 
 public CDamager__PrepareBody( Float: flDamage )
